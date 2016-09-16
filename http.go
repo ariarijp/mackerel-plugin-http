@@ -34,7 +34,7 @@ func (h HttpPlugin) GraphDefinition() map[string](mp.Graphs) {
 	return map[string](mp.Graphs){
 		"http.response_time": mp.Graphs{
 			Label: "HTTP Response",
-			Unit:  "int",
+			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				mp.Metrics{
 					Name:  "msec",
