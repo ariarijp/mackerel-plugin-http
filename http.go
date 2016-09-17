@@ -1,19 +1,23 @@
 package main
 
 import (
+	"crypto/sha1"
 	"flag"
+	"fmt"
+	"io"
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/ddliu/go-httpclient"
 	mp "github.com/mackerelio/go-mackerel-plugin-helper"
 )
 
-type HttpPlugin struct {
-	URL string
+type HTTPPlugin struct {
+	URL url.URL
 }
 
-func (h HttpPlugin) FetchMetrics() (map[string]interface{}, error) {
+func (h HTTPPlugin) FetchMetrics() (map[string]interface{}, error) {
 	stat := make(map[string]interface{})
 
 	func() {
@@ -21,7 +25,7 @@ func (h HttpPlugin) FetchMetrics() (map[string]interface{}, error) {
 			stat["msec"] = uint64(time.Since(start) / time.Millisecond)
 		}(time.Now())
 
-		_, err := httpclient.Get(h.URL, map[string]string{})
+		_, err := httpclient.Get(h.URL.String(), map[string]string{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -30,7 +34,7 @@ func (h HttpPlugin) FetchMetrics() (map[string]interface{}, error) {
 	return stat, nil
 }
 
-func (h HttpPlugin) GraphDefinition() map[string](mp.Graphs) {
+func (h HTTPPlugin) GraphDefinition() map[string](mp.Graphs) {
 	return map[string](mp.Graphs){
 		"http.response_time": mp.Graphs{
 			Label: "HTTP Response",
@@ -46,12 +50,23 @@ func (h HttpPlugin) GraphDefinition() map[string](mp.Graphs) {
 }
 
 func main() {
-	optUrl := flag.String("url", "http://localhost/", "URL")
-	optTempfile := flag.String("tempfile", "/tmp/mackerel-plugin-http", "Temp file name")
+	optURL := flag.String("url", "http://localhost/", "URL")
+	optTempfile := flag.String("tempfile", "", "Temp file name")
 	flag.Parse()
 
-	var h HttpPlugin
-	h.URL = *optUrl
+	u, err := url.Parse(*optURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if *optTempfile == "" {
+		sh := sha1.New()
+		io.WriteString(sh, u.String())
+		*optTempfile = fmt.Sprintf("/tmp/mackerel-plugin-http-%x", sh.Sum(nil))
+	}
+
+	var h HTTPPlugin
+	h.URL = *u
 
 	helper := mp.NewMackerelPlugin(h)
 	helper.Tempfile = *optTempfile
