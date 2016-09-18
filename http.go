@@ -14,7 +14,8 @@ import (
 )
 
 type HTTPPlugin struct {
-	URL url.URL
+	URL   url.URL
+	Label string
 }
 
 func (h HTTPPlugin) FetchMetrics() (map[string]interface{}, error) {
@@ -37,7 +38,7 @@ func (h HTTPPlugin) FetchMetrics() (map[string]interface{}, error) {
 func (h HTTPPlugin) GraphDefinition() map[string](mp.Graphs) {
 	return map[string](mp.Graphs){
 		"http.response_time": mp.Graphs{
-			Label: "HTTP Response",
+			Label: h.Label,
 			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				mp.Metrics{
@@ -52,6 +53,7 @@ func (h HTTPPlugin) GraphDefinition() map[string](mp.Graphs) {
 func main() {
 	optURL := flag.String("url", "http://localhost/", "URL")
 	optTempfile := flag.String("tempfile", "", "Temp file name")
+	optLabel := flag.String("label", "HTTP Response", "Label")
 	flag.Parse()
 
 	u, err := url.Parse(*optURL)
@@ -67,6 +69,7 @@ func main() {
 
 	var h HTTPPlugin
 	h.URL = *u
+	h.Label = *optLabel
 
 	helper := mp.NewMackerelPlugin(h)
 	helper.Tempfile = *optTempfile
